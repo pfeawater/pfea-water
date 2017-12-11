@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>PFEA Water Quality Map</title>
+    <link href="https://fonts.googleapis.com/css?family=Cabin:400,600" rel="stylesheet">
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link href="css/watermap.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <!-- Logo -->
+    <a href="http://pfea.org" target="_blank"><img src="assets/logo.png" width="140" style="position: absolute; top: 10px; left: 10px; z-index: 2"></a>
+
+    <!-- Info Button / Legend -->
+    <img src="img/info-button.svg" width="30" class="my_popup_open" style="position: absolute; bottom: 10px; left: 10px; z-index: 2; cursor: pointer;">
+
+    <!-- Legend Content-->
+    <div id="my_popup">
+      <p class="my_popup_close">&times;</p>
+      <h1 class="legend">La Leyenda</h1>
+      <p>
+        <ul class="legend">
+          <li id="green"><b>Muy limpio</b><br>0 - 40 ec[µs/cm]</li>
+          <li id="lightgreen"><b>Limpio</b><br>41 - 80 ec[µs/cm]</li>
+          <li id="yellow"><b>Pasable</b><br>81 - 120 ec[µs/cm]</li>
+          <li id="orange"><b>Algo Contaminado</b><br>121 - 160 ec[µs/cm]</li>
+          <li id="red"><b>Esta Contaminado</b><br>161 - 199 ec[µs/cm]</li>
+          <li id="black"><b>Muy contaminado</b><br>200+ ec[µs/cm]</li>
+        </ul></p>
+    </div>
+
+    <!-- Map -->
+    <div id="map" style="z-index: 1"></div>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBu7Hwq7jgsjGyFqDUPaOOtiogq1tJJsAo">
+    </script>
+<script type="text/javascript">
+  var sites = {
+      "SAN ANTONIO": {
+          name: "San Antonio del Mar",
+          pos: {
+              lat: 32.420472,
+              lng: -117.097368
+          },
+      },
+      "EL VIGIA": {
+          name: "El Vigia",
+          pos: {
+              lat: 32.502769,
+              lng: -117.123575
+          },
+      },
+      "PARQUE MEXICO": {
+          name: "Parque Mexico",
+          pos: {
+              lat: 32.527064,
+              lng: -117.123948
+          },
+      },
+      "EL FARO": {
+          name: "El Faro",
+          pos: {
+              lat: 32.533818,
+              lng: -117.123844
+          },
+      },
+      "CAÑADA AZTECA": {
+          name: "Cañada Azteca",
+          pos: {
+              lat: 32.521153,
+              lng: -117.1246
+          },
+      }
+  };
+
+  function makeIcon(url) {
+    return {
+      url: url,
+      scaledSize: new google.maps.Size(30, 41),
+    }
+  }
+  
+  function initMap(waterdata) {
+      var markers = [];
+      for (var i = 0; i < waterdata.length; i++) {
+          var point = {};
+          var site = sites[waterdata[i].sitio];
+
+          point['name'] = site.name;
+          point['pos'] = site.pos;
+          var date = new Date();
+          date.setTime((waterdata[i].date-(25567 + 1))*86400*1000);
+          waterdata[i].date = (date.getMonth()+1) + '/' + date.getDate() + '/' + date.getFullYear() + ' ';
+
+          point['date'] = waterdata[i].date + waterdata[i].time + " PST";
+          point['ec[µs/cm]'] = waterdata[i]['ec[µs/cm]'];
+          point['temp'] = waterdata[i]['temp.[°c]'];
+          point['ph'] = waterdata[i]['ph'];
+          point['mv[ph]'] = waterdata[i]['mv[ph]'];
+          point['orp[mv]'] = waterdata[i]['orp[mv]'];
+          point['ecAbs.[µs/cm]'] = waterdata[i]['ecAbs.[µs/cm]'];
+          point['res[kohmCm]'] = waterdata[i]['res[kohmCm]'];
+          point['tds[ppm]'] = waterdata[i]['tds[ppm]'];
+          point['sal.[psu]'] = waterdata[i]['sal.[psu]'];
+          point['sigmaT[st]'] = waterdata[i]['sigmaT[st]'];
+          point['press.[psi]'] = waterdata[i]['press.[psi]'];
+          point['d.o.[%]'] = waterdata[i]['d.o.[%]'];
+          point['d.o.[mg/l]'] = waterdata[i]['d.o.[mg/l]'];
+          
+          if (point['ec[µs/cm]'] <= 40) {
+            point['cfuLabel'] = "Muy Limpio";
+            point['icon'] = makeIcon("img/green-pin.png");
+          }
+          if (point['ec[µs/cm]'] <= 80 && point['ec[µs/cm]'] >= 41) {
+            point['cfuLabel'] = "Limpio";
+            point['icon'] = makeIcon("img/green-pin.png");
+          }
+          if (point['ec[µs/cm]'] < 81 && point['cfuVal'] > 119) {
+              point['cfuLabel'] = "Pasable";
+              point['icon'] = makeIcon("img/yellow-pin.png");
+          }
+          if (point['ec[µs/cm]'] < 161 && point['cfuVal'] >= 121) {
+              point['cfuLabel'] = "Algo Contaminado";
+              point['icon'] = makeIcon("img/orange-pin.png");
+          }
+          if (point['ec[µs/cm]'] >= 199 && point['cfuVal'] >= 161) {
+              point['cfuLabel'] = "Esta Contaminado";
+              point['icon'] = makeIcon("img/black-pin.png");
+          }
+          if (point['ec[µs/cm]'] >= 200) {
+              point['cfuLabel'] = "Muy Contaminado";
+              point['icon'] = makeIcon("img/black-pin.png");
+          }
+          markers.push(point);
+      }
+      var mapOptions = {
+          zoom: 12,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          disableDefaultUI: true
+      };
+      var tijuana = {
+          lat: 32.441964,
+          lng: -117.089977
+      };
+      var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: tijuana,
+          mapTypeControl: false,
+          scrollwheel: false,
+          fullscreenControl: false
+      });
+      for (var marker in markers) {
+          marker = markers[marker];
+          var html = '<div id="content">' +
+              '<h1>' + marker.name + '</h1>' +
+              '<div id="bodyContent">' +
+              '<h3>' + marker.cfuLabel + '</h3>' +
+              '<p>' + marker["ec[µs/cm]"] + " ec[µs/cm]" + "</br>" + 
+              marker['temp'] + " °c" + "</br>" + 
+              marker['ph'] + " ph" + "</br>" +
+              marker['mv[ph]'] + " mv[ph]" + "</br>" +
+              marker['orp[mv]'] + " orp[mv]" + "</br>" +
+              marker['ecAbs.[µs/cm]'] + " ecAbs.[µs/cm]" + "</br>" + 
+              marker['res[kohmCm]'] + " res[kohmCm]" + "</br>" +
+              marker['tds[ppm]'] + ' tds[ppm]' + "</br>" +
+              marker['sal.[psu]'] + ' sal.[psu]' + "</br>" +
+              marker['sigmaT[st]'] + ' sigmaT[st]' + "</br>" +
+              marker['press.[psi]'] + " press.[psi]" + "</br>" +
+              marker['d.o.[%]'] + ' d.o.[%]' + "</br>" +
+              marker['d.o.[mg/l]'] + " d.o.[mg/l]" + "</br>" + 
+              '</p>' +
+              '<p class="date">' + 'Last updated: ' + marker.date + '</p>' +
+              '</div>' +
+              '</div>';
+          var infoWindow = new google.maps.InfoWindow();
+
+          var _marker = new google.maps.Marker({
+              position: marker.pos,
+              map: map,
+              title: marker.name,
+              html: html,
+              icon: marker.icon,
+          });
+          _marker.addListener('click', function() {
+              infoWindow.setContent(this.html);
+              infoWindow.open(map, this);
+          });
+          _marker.addListener('mouseover', function() {
+              infoWindow.setContent(this.html);
+              infoWindow.open(map, this);
+
+          });
+          _marker.addListener('mouseout', function() {
+              infoWindow.close();
+          });
+      };
+      var currCenter = map.getCenter();
+      google.maps.event.addDomListener(window, 'resize', function() {
+          map.setCenter(currCenter);
+      });
+  }
+
+  initMap(<%-JSON.stringify(waterdata)%>);
+</script>
+    
+    <script src="https://code.jquery.com/jquery-1.8.2.min.js"></script>
+    <script src="https://cdn.rawgit.com/vast-engineering/jquery-popup-overlay/1.7.13/jquery.popupoverlay.js"></script>
+
+    <script>
+      $(document).ready(function() {
+        $('#my_popup').popup({
+          transition: 'all 0.3s'
+        });
+      });
+    </script>
+
+  </body>
+</html>
